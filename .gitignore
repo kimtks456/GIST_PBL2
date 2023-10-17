@@ -1,2 +1,6 @@
 .DS_STORE
+.idea/
+__pycache__/
+crowdhuman_yolov5m.pt
+test_video.mp4
 

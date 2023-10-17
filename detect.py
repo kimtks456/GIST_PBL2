@@ -16,10 +16,10 @@ from utils.plots import plot_one_box
 from utils.torch_utils import select_device, load_classifier, time_synchronized
 
 import bunny_preprocessing
-from backHead_classification import HeadClassification
-import face_recog_image
+# from backHead_classification import HeadClassification
+# import face_recog_image
 import iou
-from backHead_classification.backHead_classification_CNN import HeadClassificationCNN
+# from backHead_classification.backHead_classification_CNN import HeadClassificationCNN
 
 
 def detect(save_img=False):
@@ -35,6 +35,7 @@ def detect(save_img=False):
     set_logging()
     device = select_device(opt.device)
     half = device.type != 'cpu'  # half precision only supported on CUDA
+    print("[1] Complete Model Initialize")
 
     # Load model
     model = attempt_load(weights, map_location=device)  # load FP32 model
@@ -42,6 +43,8 @@ def detect(save_img=False):
     imgsz = check_img_size(imgsz, s=stride)  # check img_size
     if half:
         model.half()  # to FP16
+
+    print("[2] Complete Model Load")
 
     # Second-stage classifier
     classify = False
@@ -64,6 +67,7 @@ def detect(save_img=False):
     colors = [[random.randint(0, 255) for _ in range(3)] for _ in names]
 
     # Run inference
+    print("[3] Start Inference")
     if device.type != 'cpu':
         model(torch.zeros(1, 3, imgsz, imgsz).to(device).type_as(next(model.parameters())))  # run once
     t0 = time.time()
@@ -83,7 +87,7 @@ def detect(save_img=False):
     # headmodel.eval()
 
     # load heroine face recognition model
-    facemodel = face_recog_image.FaceRecog()
+    # facemodel = face_recog_image.FaceRecog()
 
     # # Load heroines coordinates
     # f = open("mudo_center.txt", 'r')
@@ -95,7 +99,10 @@ def detect(save_img=False):
 
     heroCoord = [[0, 0, 0, 0] for _ in range(5)]
 
+    print_idx = 0
     for path, img, im0s, vid_cap in dataset:
+        print_idx += 1
+
         img = torch.from_numpy(img).to(device)
         img = img.half() if half else img.float()  # uint8 to fp16/32
         img /= 255.0  # 0 - 255 to 0.0 - 1.0
@@ -165,8 +172,8 @@ def detect(save_img=False):
                 for *xyxy, conf, cls in reversed(det):
                     res, coor = [], []
                     # xyxy to numpy
-                    for i in xyxy:
-                        coor.append(i.numpy())
+                    for ii in xyxy:
+                        coor.append(ii.numpy())
                     res.append(coor)
                     res = np.array(res, dtype=float)
                     vol = (res[0, 2] - res[0, 0]) * (res[0, 3] - res[0, 1])
@@ -184,8 +191,8 @@ def detect(save_img=False):
                 for *xyxy, conf, cls in reversed(det):
                     res, coor = [], []
                     # xyxy to numpy
-                    for i in xyxy:
-                        coor.append(i.numpy())
+                    for ii in xyxy:
+                        coor.append(ii.numpy())
                     res.append(coor)
                     res = np.array(res, dtype=int)
 
@@ -262,26 +269,25 @@ def detect(save_img=False):
                             # Classify Heroine or Not
                             if 'head' in label and opt.heads:
                                 temp_iou = False
-                                for i in range(len(heroCoord)):
-                                    if len(heroCoord[i]) > 0:
-                                        if iou.IoU(res[0], heroCoord[i]) > 0.9:
+                                for ii in range(len(heroCoord)):
+                                    if len(heroCoord[ii]) > 0:
+                                        if iou.IoU(res[0], heroCoord[ii]) > 0.9:
                                             temp_iou = True
                                             break
                                 # print(im0_crop_rr, im0_crop_rr.shape, res)
-                                if facemodel.get_frame(cv2.cvtColor(im0_crop_rr, cv2.COLOR_BGR2RGB), location,
-                                                       temp_iou):  # not heroine
-                                    # if 'head' in label and opt.heads and facemodel.get_frame(im0_crop) is not True: # heroine
-                                    # im0[res[0,1]:res[0,3], res[0,0]:res[0,2],:] = np.where(mask_rgb > 0, img_r, im0_crop)
-                                    # im0[res[0,1]:res[0,3], res[0,0]:res[0,2],:] = np.where(mask_rgb == 253, img_r, im0_crop)
-                                    heroCoord.pop(0)
-                                    heroCoord.append(res[0])
-                                else:
-                                    heroCoord.pop(0)
-                                    heroCoord.append([])
-                                    # elif len(heroCoord) > 0:
-                                    #     temp_iou = iou.IoU(res, heroCoord)
-                                    #     if temp_iou < 0.5:
-                                    im0[res[0, 1]:res[0, 3], res[0, 0]:res[0, 2], :] = np.where(mask_rgb > 0, img_r,
+                                # if facemodel.get_frame(cv2.cvtColor(im0_crop_rr, cv2.COLOR_BGR2RGB), location,
+                                #                        temp_iou):  # not heroine
+                                #     # if 'head' in label and opt.heads and facemodel.get_frame(im0_crop) is not True: # heroine
+                                #     # im0[res[0,1]:res[0,3], res[0,0]:res[0,2],:] = np.where(mask_rgb > 0, img_r, im0_crop)
+                                #     # im0[res[0,1]:res[0,3], res[0,0]:res[0,2],:] = np.where(mask_rgb == 253, img_r, im0_crop)
+                                #     heroCoord.pop(0)
+                                #     heroCoord.append(res[0])
+                                heroCoord.pop(0)
+                                heroCoord.append([])
+                                # elif len(heroCoord) > 0:
+                                #     temp_iou = iou.IoU(res, heroCoord)
+                                #     if temp_iou < 0.5:
+                                im0[res[0, 1]:res[0, 3], res[0, 0]:res[0, 2], :] = np.where(mask_rgb > 0, img_r,
                                                                                                 im0_crop)
                                 #     else:
                                 #         heroCoord = res[0]
@@ -304,6 +310,7 @@ def detect(save_img=False):
             # cv2.waitKey(0)
 
             # Print time (inference + NMS)
+            # if print_idx % 10 == 0:
             print(f'{s}Done. ({t2 - t1:.3f}s)')
 
             # Stream results
